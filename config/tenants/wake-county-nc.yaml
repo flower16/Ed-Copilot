@@ -1,0 +1,16 @@
+district_id: wake_county_nc
+name: Wake County NC (WCPSS)
+state: NC
+county: Wake
+agent_module: src.agents.wake_county_agent
+intents:
+  - math_curriculum
+  - admin_policy
+  - college_guidance
+retrieval:
+  k: 8
+  rerank_n: 4
+  min_score: 0.35
+chroma:
+  math_db_dir: chroma_db
+  admin_db_dir: chroma_db_admin

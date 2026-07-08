@@ -1,0 +1,22 @@
+district_id: frisco_isd_tx
+name: Frisco ISD
+state: TX
+county: Collin
+agent_module: src.agents.frisco_isd_tx_agent
+intents:
+  - course_catalog
+  - admin_policy
+retrieval:
+  k: 8
+  rerank_n: 4
+  min_score: 0.35
+sources:
+  course_catalog:
+    type: apptegy_api
+    url: "https://www.friscoisd.org/academics/course-catalog"
+    crawler: playwright
+  admin_policy:
+    type: pdf
+    path: data/frisco/
+chroma:
+  collection_prefix: frisco_isd_tx

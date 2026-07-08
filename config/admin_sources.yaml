@@ -1,0 +1,55 @@
+districts:
+  wake_county_nc:
+    name: "Wake County Public School System"
+    root_domain: "wcpss.net"
+    sitemap_url: "https://www.wcpss.net/sitemap.xml"
+    path_filters: ["calendar", "policy", "board", "news", "attendance"]
+    urls:
+      - { url: "https://www.wcpss.net/calendar",                                                                                    label: "school_calendar" }
+      - { url: "https://www.wcpss.net/Page/1104",                                                                                   label: "board_meetings" }
+      - { url: "https://www.wcpss.net/student-life/calendars-and-attendance",                                                       label: "attendance_policy" }
+      - { url: "https://www.wcpss.net/about-us/policies",                                                                           label: "district_policies" }
+      - { url: "https://www.wcpss.net/parent-resources/~board/family-resources/post/school-psychologists",                          label: "school_psychologists" }
+      - { url: "https://www.wcpss.net/about-us/policies/student-family-handbook",                                                   label: "student_family_handbook" }
+      - { url: "https://www.wcpss.net/parent-resources/~board/family-resources/post/wcpss-text-message-alerts-via-talkingpoints",   label: "text_message_alerts" }
+      - { url: "https://www.wcpss.net/academics/special-education",                                                                 label: "special_education" }
+      - { url: "https://www.wcpss.net/about-us/school-board",                                                                       label: "school_board" }
+      - { url: "https://www.wcpss.net/academics/advanced-learningaig",                                                              label: "advanced_learning_aig" }
+    pdfs: []
+
+  frisco_isd_tx:
+    name: "Frisco ISD"
+    root_domain: "friscoisd.org"
+    sitemap_url: "https://www.friscoisd.org/sitemap.xml"
+    path_filters: ["calendar", "board", "policy", "handbook", "student-services"]
+    urls:
+      - { url: "https://www.friscoisd.org/about/calendars",                               label: "school_calendar" }
+      - { url: "https://www.friscoisd.org/about/board-of-trustees/meetings",              label: "board_meetings" }
+      - { url: "https://www.friscoisd.org/departments/student-services/student-handbook", label: "student_handbook" }
+    pdfs:
+      # Official 2024-25 Student & Parent Handbook (122 pages) - archived from friscoisd.org
+      # Covers: attendance, homework, grading, discipline, dress code, electronic devices, academic integrity
+      - { path: "frisco_isd_student_handbook_2024_25.pdf",              label: "student_handbook" }
+      # Official 2025-26 High School Academic Planning Guide (51 pages) - from friscoisd.org
+      # Covers: course requirements, GPA calculation, graduation planning, dual credit, AP courses
+      - { path: "frisco_isd_hs_academic_planning_guide_2025_26.pdf",   label: "academic_planning_guide" }
+      # Official 2024-25 CTE Center Handbook Addendum (8 pages) - from schools.friscoisd.org
+      # Covers: CTE-specific attendance, grading, and campus expectations
+      - { path: "ctec-addendum-2024-2025.pdf",                          label: "cte_handbook_addendum" }
+
+  plano_isd_tx:
+    name: "Plano ISD"
+    root_domain: "pisd.edu"
+    sitemap_url: "https://www.pisd.edu/sitemap.xml"
+    path_filters: ["calendar", "board", "policy", "departments"]
+    urls:
+      - { url: "https://www.pisd.edu/calendar", label: "school_calendar" }
+      - { url: "https://www.pisd.edu/board",    label: "board_meetings" }
+      - { url: "https://www.pisd.edu/Page/4",   label: "district_policies" }
+    pdfs:
+      # Official 2025-26 Student Handbook (121 pages) - from pisd.edu via finalsite CDN
+      # Covers: attendance, homework, grading, STAAR, technology, health, promotion/retention
+      - { path: "plano_isd_student_handbook_2025_26.pdf",              label: "student_handbook" }
+      # Official 2025-26 Student Code of Conduct (49 pages) - from pisd.edu via finalsite CDN
+      # Covers: discipline tiers, DAEP, anti-bullying, academic integrity, dress code, searches
+      - { path: "plano_isd_student_code_of_conduct_2025_26.pdf",       label: "student_code_of_conduct" }

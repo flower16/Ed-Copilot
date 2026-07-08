@@ -1,0 +1,22 @@
+district_id: plano_isd_tx
+name: Plano ISD
+state: TX
+county: Collin
+agent_module: src.agents.plano_isd_tx_agent
+intents:
+  - course_catalog
+  - admin_policy
+retrieval:
+  k: 8
+  rerank_n: 4
+  min_score: 0.35
+sources:
+  course_catalog:
+    type: web
+    url: "https://www.pisd.edu/students-families-a6/eschool/catalog/mathematics"
+    crawler: httpx
+  admin_policy:
+    type: pdf
+    path: data/plano/
+chroma:
+  collection_prefix: plano_isd_tx

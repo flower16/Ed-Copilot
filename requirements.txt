@@ -1,0 +1,26 @@
+# Coherent, wheel-only stack for Ed-Copilot on Windows / Python 3.12.
+# Install into a clean, isolated venv (NO --system-site-packages):
+#   python -m venv .venv
+#   .venv\Scripts\python -m pip install -r requirements.txt --only-binary=chromadb
+# chromadb 1.x ships a prebuilt wheel (Rust core, no C++ build tools needed).
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.11.0
+streamlit==1.40.2
+chromadb==1.5.9
+langchain==0.3.27
+langchain-community==0.3.27
+langchain-core==0.3.86
+langchain-openai==0.2.14
+langchain-huggingface==0.1.2
+langchain-chroma==0.2.6
+langgraph==0.2.60
+tokenizers==0.20.3
+transformers==4.46.3
+sentence-transformers==3.3.1
+openai>=1.58.1,<2.0.0
+python-dotenv==1.0.1
+pymupdf==1.24.14
+rank-bm25==0.2.2
+beautifulsoup4==4.12.3
+# Optional — only needed for live Frisco crawl (--crawl); seed ingestion works without it:
+# playwright==1.48.0

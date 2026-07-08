@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ed-Copilot Architecture</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+    padding: 24px 20px 40px;
+    min-width: 900px;
+  }
+
+  /* ── Header ─────────────────────────────────────────────── */
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+  }
+  .header p {
+    margin-top: 6px;
+    font-size: 0.875rem;
+    color: #64748b;
+  }
+
+  /* ── Legend ─────────────────────────────────────────────── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: #334155;
+  }
+  .legend-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.12);
+    flex-shrink: 0;
+  }
+  .legend-swatch.dashed {
+    border: 2px dashed #9333ea;
+    background: #faf5ff;
+  }
+
+  /* ── Diagram wrapper ─────────────────────────────────────── */
+  .diagram {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* ── Layer row ───────────────────────────────────────────── */
+  .layer {
+    position: relative;
+  }
+  .layer-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 6px;
+    padding-left: 4px;
+  }
+  .layer-content {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  /* ── Connector arrow between layers ─────────────────────── */
+  .connector {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 28px;
+    position: relative;
+  }
+  .connector::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #cbd5e1;
+    transform: translateX(-50%);
+  }
+  .connector-arrow {
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-top: 10px solid #94a3b8;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Fan-out connector (orchestrator → specialists) */
+  .connector-fanout {
+    height: 36px;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .connector-fanout svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /* ── Box base ────────────────────────────────────────────── */
+  .box {
+    border-radius: 10px;
+    padding: 12px 14px;
+    border: 1.5px solid transparent;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    flex: 1;
+  }
+  .box-title {
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .box-title .icon { font-size: 1rem; }
+  .box-sub {
+    font-size: 0.75rem;
+    color: #475569;
+    margin-top: 3px;
+  }
+  .pill {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 99px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    margin-top: 4px;
+    margin-right: 3px;
+  }
+  .chip {
+    display: inline-block;
+    background: rgba(0,0,0,0.07);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    margin-top: 3px;
+    margin-right: 3px;
+  }
+
+  /* Phase 2 badge */
+  .phase2-badge {
+    display: inline-block;
+    background: #f3e8ff;
+    color: #7e22ce;
+    border: 1px solid #d8b4fe;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-left: 4px;
+  }
+
+  /* ── Domain color themes ─────────────────────────────────── */
+
+  /* UI (sky blue) */
+  .ui-box {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+    color: #0c4a6e;
+  }
+  .ui-box .box-title { color: #0369a1; }
+  .ui-box .box-sub { color: #0369a1; opacity: 0.75; }
+  .ui-box .chip { background: #bae6fd; color: #0c4a6e; }
+
+  /* Orchestrator (indigo/blue) */
+  .orch-box {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1e3a8a;
+  }
+  .orch-box .box-title { color: #1d4ed8; }
+  .orch-box .box-sub { color: #1e3a8a; opacity: 0.75; }
+  .orch-box .chip { background: #bfdbfe; color: #1e3a8a; }
+
+  /* Math (green) */
+  .math-box {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #14532d;
+  }
+  .math-box .box-title { color: #15803d; }
+  .math-box .box-sub { color: #14532d; opacity: 0.75; }
+  .math-box .chip { background: #bbf7d0; color: #14532d; }
+
+  /* Admin (orange) */
+  .admin-box {
+    background: #ffedd5;
+    border-color: #fdba74;
+    color: #7c2d12;
+  }
+  .admin-box .box-title { color: #c2410c; }
+  .admin-box .box-sub { color: #7c2d12; opacity: 0.75; }
+  .admin-box .chip { background: #fed7aa; color: #7c2d12; }
+
+  /* Guidance (purple, Phase 2 - muted + dashed) */
+  .guidance-box {
+    background: #faf5ff;
+    border: 2px dashed #c084fc;
+    color: #3b0764;
+    opacity: 0.82;
+  }
+  .guidance-box .box-title { color: #7e22ce; }
+  .guidance-box .box-sub { color: #3b0764; opacity: 0.75; }
+  .guidance-box .chip { background: #e9d5ff; color: #3b0764; }
+
+  /* Out-of-scope (gray) */
+  .oos-box {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #334155;
+  }
+  .oos-box .box-title { color: #475569; }
+  .oos-box .box-sub { color: #334155; opacity: 0.75; }
+  .oos-box .chip { background: #e2e8f0; color: #334155; }
+
+  /* Shared LLM (slate) */
+  .llm-box {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #1e293b;
+  }
+  .llm-box .box-title { color: #334155; }
+  .llm-box .box-sub { color: #475569; }
+  .llm-box .chip { background: #e2e8f0; color: #334155; }
+
+  /* Data sources (neutral) */
+  .data-box {
+    background: #fafafa;
+    border-color: #d1d5db;
+    color: #374151;
+  }
+  .data-box .box-title { color: #374151; }
+  .data-box .box-sub { color: #6b7280; }
+  .data-box .chip { background: #e5e7eb; color: #374151; }
+
+  /* ── Wide single-column row ──────────────────────────────── */
+  .row-single .box {
+    flex: 1;
+  }
+
+  /* ── Domain column spans ─────────────────────────────────── */
+  .col-math   { flex: 1.4; }
+  .col-admin  { flex: 1.4; }
+  .col-guidance { flex: 1.4; }
+  .col-oos    { flex: 0.9; }
+
+  /* ── Separator ───────────────────────────────────────────── */
+  .sep {
+    width: 1px;
+    background: #e2e8f0;
+    align-self: stretch;
+    margin: 0 2px;
+  }
+
+  /* ── Footer ─────────────────────────────────────────────── */
+  .footer {
+    text-align: center;
+    margin-top: 36px;
+    font-size: 0.72rem;
+    color: #94a3b8;
+  }
+
+  /* ── Info row (retrieval detail) ─────────────────────────── */
+  .detail-row {
+    font-size: 0.72rem;
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top: 1px solid rgba(0,0,0,0.08);
+    color: inherit;
+    opacity: 0.85;
+  }
+  .detail-row strong { font-weight: 600; }
+
+  /* ── Vertical merge line for LLM ─────────────────────────── */
+  .merge-connector {
+    height: 28px;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .merge-connector svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    overflow: visible;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎓 Ed-Copilot — System Architecture</h1>
+  <p>End-to-end design: User Interface → LangGraph Orchestrator → Specialist Agents → Knowledge Bases → Data Sources</p>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-swatch" style="background:#e0f2fe;border-color:#7dd3fc;"></div>
+    User Interface / Orchestrator
+  </div>
+  <div class="legend-item">
+    <div class="legend-swatch" style="background:#dcfce7;border-color:#86efac;"></div>
+    Math Domain
+  </div>
+  <div class="legend-item">
+    <div class="legend-swatch" style="background:#ffedd5;border-color:#fdba74;"></div>
+    Admin Domain
+  </div>
+  <div class="legend-item">
+    <div class="legend-swatch dashed"></div>
+    College Guidance Domain (Phase 2)
+  </div>
+  <div class="legend-item">
+    <div class="legend-swatch" style="background:#f1f5f9;border-color:#cbd5e1;"></div>
+    Out-of-Scope / Shared Infrastructure
+  </div>
+</div>
+
+<div class="diagram">
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- LAYER 1 — User Interface                               -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="layer">
+    <div class="layer-label">Layer 1 — User Interface</div>
+    <div class="layer-content row-single">
+      <div class="box ui-box">
+        <div class="box-title"><span class="icon">🖥️</span> Streamlit App</div>
+        <div class="box-sub">Single-page chat interface — users interact via a chat input; all config lives in the sidebar.</div>
+        <div style="display:flex; flex-wrap:wrap; gap:14px; margin-top:10px;">
+          <div>
+            <div style="font-size:0.72rem; font-weight:600; color:#0369a1; margin-bottom:3px;">Persona Selector</div>
+            <span class="chip">👩‍👧 Parent</span>
+            <span class="chip">🎒 Student</span>
+            <span class="chip">📋 Teacher</span>
+          </div>
+          <div>
+            <div style="font-size:0.72rem; font-weight:600; color:#0369a1; margin-bottom:3px;">District Dropdown</div>
+            <span class="chip">Wake County NC</span>
+            <span class="chip">Frisco ISD TX</span>
+            <span class="chip">Plano ISD TX</span>
+          </div>
+          <div>
+            <div style="font-size:0.72rem; font-weight:600; color:#0369a1; margin-bottom:3px;">Intent Badge</div>
+            <span class="chip">📐 Math Curriculum</span>
+            <span class="chip">🏫 District Policy</span>
+            <span class="chip">🎓 Guidance</span>
+            <span class="chip">🚫 Out of Scope</span>
+          </div>
+          <div>
+            <div style="font-size:0.72rem; font-weight:600; color:#0369a1; margin-bottom:3px;">Disclaimer Banner</div>
+            <span class="chip">⚠️ Always visible — verify at official district site</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- connector -->
+  <div class="connector"><div class="connector-arrow"></div></div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- LAYER 2 — LangGraph Orchestrator                       -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="layer">
+    <div class="layer-label">Layer 2 — LangGraph Orchestrator</div>
+    <div class="layer-content row-single">
+      <div class="box orch-box">
+        <div class="box-title"><span class="icon">🔀</span> StateGraph — <code>EdCopilotState</code></div>
+        <div class="box-sub">Stateful LangGraph graph; the state object carries all data across nodes. Compiled once with <code>@st.cache_resource</code>.</div>
+        <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+          <div style="background:rgba(255,255,255,0.6); border-radius:8px; padding:8px 10px; flex:1; min-width:160px;">
+            <div style="font-size:0.72rem; font-weight:700; color:#1d4ed8; margin-bottom:4px;">Node — <code>classify_intent</code></div>
+            <div style="font-size:0.7rem; color:#1e3a8a;">Lightweight LLM call — reads last user message, returns one of four intent labels. Writes <code>intent</code> + <code>intent_badge</code> to state.</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.6); border-radius:8px; padding:8px 10px; flex:1; min-width:200px;">
+            <div style="font-size:0.72rem; font-weight:700; color:#1d4ed8; margin-bottom:4px;">State Fields — <code>EdCopilotState</code></div>
+            <div style="font-size:0.7rem; color:#1e3a8a; line-height:1.6;">
+              <code>messages[]</code> · <code>persona</code> · <code>district</code><br/>
+              <code>intent</code> · <code>context_docs[]</code><br/>
+              <code>response</code> · <code>intent_badge</code>
+            </div>
+          </div>
+          <div style="background:rgba(255,255,255,0.6); border-radius:8px; padding:8px 10px; flex:1; min-width:160px;">
+            <div style="font-size:0.72rem; font-weight:700; color:#1d4ed8; margin-bottom:4px;">Conditional Edges</div>
+            <div style="font-size:0.7rem; color:#1e3a8a;">Routes on <code>state["intent"]</code> to one of four specialist branches below. All branches merge back to <code>state["response"]</code>.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- fan-out connector -->
+  <div style="position:relative; height:40px; margin: 0 4px;">
+    <svg width="100%" height="100%" overflow="visible" style="position:absolute;top:0;left:0;">
+      <defs>
+        <marker id="arr-math"  markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+          <polygon points="0,0 8,4 0,8" fill="#4ade80" transform="rotate(90,4,4)"/>
+        </marker>
+        <marker id="arr-admin" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+          <polygon points="0,0 8,4 0,8" fill="#fb923c" transform="rotate(90,4,4)"/>
+        </marker>
+        <marker id="arr-guid"  markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+          <polygon points="0,0 8,4 0,8" fill="#c084fc" transform="rotate(90,4,4)"/>
+        </marker>
+        <marker id="arr-oos"   markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+          <polygon points="0,0 8,4 0,8" fill="#94a3b8" transform="rotate(90,4,4)"/>
+        </marker>
+      </defs>
+      <!-- vertical stem from center top -->
+      <line x1="50%" y1="0" x2="50%" y2="18" stroke="#94a3b8" stroke-width="2"/>
+      <!-- horizontal bar -->
+      <line x1="12%" y1="18" x2="88%" y2="18" stroke="#94a3b8" stroke-width="2"/>
+      <!-- drops to each column with arrowhead markers -->
+      <line x1="12%"   y1="18" x2="12%"   y2="38" stroke="#4ade80" stroke-width="2" marker-end="url(#arr-math)"/>
+      <line x1="37.5%" y1="18" x2="37.5%" y2="38" stroke="#fb923c" stroke-width="2" marker-end="url(#arr-admin)"/>
+      <line x1="63%"   y1="18" x2="63%"   y2="38" stroke="#c084fc" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#arr-guid)"/>
+      <line x1="88%"   y1="18" x2="88%"   y2="38" stroke="#94a3b8" stroke-width="2" marker-end="url(#arr-oos)"/>
+    </svg>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- LAYER 3 — Specialist Nodes                             -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="layer">
+    <div class="layer-label">Layer 3 — Specialist Nodes</div>
+    <div class="layer-content">
+
+      <div class="box math-box col-math">
+        <div class="box-title"><span class="icon">📐</span> math_specialist</div>
+        <div class="box-sub">Handles <code>intent = math_curriculum</code>. Calls the hybrid retriever on <code>chroma_db/</code>. Persona-aware prompt shapes answer style.</div>
+        <div class="detail-row">
+          <strong>Persona prompts:</strong><br/>
+          Student — simple + encouraging · Parent — practical context · Teacher — precise, full standard ID
+        </div>
+      </div>
+
+      <div class="box admin-box col-admin">
+        <div class="box-title"><span class="icon">🏫</span> admin_specialist</div>
+        <div class="box-sub">Handles <code>intent = admin_policy</code>. Retrieves from <code>chroma_db_admin/</code> with a <code>district</code> metadata filter so districts never cross-contaminate.</div>
+        <div class="detail-row">
+          <strong>Sources expander:</strong> shows <code>source_url</code> + <code>label</code> per retrieved chunk · District disclaimer appended to every response
+        </div>
+      </div>
+
+      <div class="box guidance-box col-guidance">
+        <div class="box-title"><span class="icon">🎓</span> guidance_stub<span class="phase2-badge">Phase 2</span></div>
+        <div class="box-sub">Handles <code>intent = college_guidance</code>. Currently returns a planned-phase stub message. Full implementation in Phase 2.</div>
+        <div class="detail-row">
+          <strong>Phase 2 plan:</strong> Student Profile → Articulation Engine → Prerequisite Graph → <code>chroma_db_guidance/</code> → LLM
+        </div>
+      </div>
+
+      <div class="box oos-box col-oos">
+        <div class="box-title"><span class="icon">🚫</span> out_of_scope_handler</div>
+        <div class="box-sub">Handles <code>intent = out_of_scope</code>. <strong>No LLM call.</strong> Returns a hardcoded redirect message immediately.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- connector -->
+  <div class="connector"><div class="connector-arrow"></div></div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- LAYER 4 — Retrievers / Knowledge Bases                 -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="layer">
+    <div class="layer-label">Layer 4 — Retrievers &amp; Knowledge Bases</div>
+    <div class="layer-content">
+
+      <div class="box math-box col-math">
+        <div class="box-title"><span class="icon">🔍</span> Hybrid Retriever</div>
+        <span class="chip">ChromaDB dense</span>
+        <span class="chip">BM25 sparse</span>
+        <span class="chip">Cross-Encoder reranker</span>
+        <div class="detail-row">
+          <strong>Collection:</strong> <code>chroma_db/</code> — 1,158 chunks from NC Math 1, 2 &amp; 3 PDFs, chunked by NC Standard ID (regex split on <code>NC.M&lt;n&gt;.xxx</code> markers). Metadata: <code>standard_id</code>, <code>course_id</code>.
+        </div>
+      </div>
+
+      <div class="box admin-box col-admin">
+        <div class="box-title"><span class="icon">🗂️</span> Admin Retriever</div>
+        <span class="chip">ChromaDB similarity_search</span>
+        <span class="chip">district metadata filter</span>
+        <div class="detail-row">
+          <strong>Collection:</strong> <code>chroma_db_admin/</code> — web pages + policy PDFs from all three districts. Metadata filter <code>{"district": district}</code> scopes every query to the selected district. Top-5 chunks returned.
+        </div>
+      </div>
+
+      <div class="box guidance-box col-guidance">
+        <div class="box-title"><span class="icon">🗃️</span> Guidance Retriever<span class="phase2-badge">Phase 2</span></div>
+        <span class="chip">chroma_db_guidance/</span>
+        <span class="chip">domain=guidance</span>
+        <div class="detail-row">
+          <strong>Phase 2 sources:</strong> WCPSS / Frisco / Plano program planning guides, university admissions pages (UNC, NC State, UC Berkeley, UC San Diego), Wake Tech CCP catalog.
+        </div>
+      </div>
+
+      <div class="box oos-box col-oos" style="display:flex; align-items:center; justify-content:center; text-align:center;">
+        <div>
+          <div class="box-title" style="justify-content:center;">⛔ No Retrieval</div>
+          <div class="box-sub">Out-of-scope path skips the retriever entirely. Hardcoded response only.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- connector -->
+  <div class="connector"><div class="connector-arrow"></div></div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- LAYER 5 — Shared LLM                                   -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="layer">
+    <div class="layer-label">Layer 5 — Shared LLM Infrastructure</div>
+    <div class="layer-content row-single">
+      <div class="box llm-box">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <div style="flex:1; min-width:200px;">
+            <div class="box-title"><span class="icon">🤖</span> Nebius / Llama-3.3-70B-Instruct</div>
+            <div class="box-sub">Single shared LLM instance used by <code>classify_intent</code>, <code>math_specialist</code>, and <code>admin_specialist</code>. Accessed via the OpenAI-compatible Nebius API endpoint.</div>
+          </div>
+          <div style="flex:1; min-width:220px; background:#e2e8f0; border-radius:8px; padding:8px 10px;">
+            <div style="font-size:0.72rem; font-weight:700; color:#334155; margin-bottom:4px;">🎭 Persona-Aware Prompt Modifier</div>
+            <div style="font-size:0.7rem; color:#475569; line-height:1.6;">
+              Injects a persona instruction into every specialist system prompt before the LLM call.<br/>
+              <span class="chip">Parent</span> — practical context<br/>
+              <span class="chip">Student</span> — simple + encouraging<br/>
+              <span class="chip">Teacher</span> — precise + full detail
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- connector -->
+  <div class="connector"><div class="connector-arrow"></div></div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- LAYER 6 — Ingestion Pipelines                          -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="layer">
+    <div class="layer-label">Layer 6 — Ingestion Pipelines</div>
+    <div class="layer-content">
+
+      <div class="box math-box col-math">
+        <div class="box-title"><span class="icon">⚙️</span> Math Ingestion (<code>src/ingestion.py</code>)</div>
+        <div class="box-sub">PyMuPDFLoader → regex split on NC Standard IDs → per-standard chunks → ChromaDB</div>
+        <div class="detail-row">
+          <strong>Chunking:</strong> Regex pattern <code>NC.M&lt;n&gt;.xxx</code> — one chunk per standard. <strong>1,158 chunks</strong> in <code>chroma_db/</code>. <em>Unchanged from current implementation.</em>
+        </div>
+      </div>
+
+      <div class="box admin-box col-admin">
+        <div class="box-title"><span class="icon">⚙️</span> Admin Ingestion (<code>src/admin_ingestion.py</code>)</div>
+        <div class="box-sub">WebBaseLoader (web pages) + PyMuPDFLoader (policy PDFs) → RecursiveCharacterTextSplitter (800 tokens, 100 overlap) → enrich metadata → ChromaDB</div>
+        <div class="detail-row">
+          <strong>Dedup:</strong> Skips URLs already indexed today. Config: <code>config/admin_sources.yaml</code> (Option 3 format — future-ready for hybrid discovery).
+        </div>
+      </div>
+
+      <div class="box guidance-box col-guidance">
+        <div class="box-title"><span class="icon">⚙️</span> Guidance Ingestion<span class="phase2-badge">Phase 2</span></div>
+        <div class="box-sub">Program planning guides (PDF) + university admissions pages (web) + Wake Tech CCP catalog → <code>chroma_db_guidance/</code></div>
+        <div class="detail-row">
+          <strong>Metadata:</strong> <code>domain=guidance</code>, <code>district</code>, <code>source_type</code> (local_curriculum / university_admissions / dual_enrollment)
+        </div>
+      </div>
+
+      <div class="box oos-box col-oos" style="display:flex; align-items:center; justify-content:center; text-align:center;">
+        <div>
+          <div class="box-title" style="justify-content:center;">—</div>
+          <div class="box-sub" style="font-size:0.72rem;">No ingestion pipeline for out-of-scope path.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- connector -->
+  <div class="connector"><div class="connector-arrow"></div></div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- LAYER 7 — Data Sources                                 -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="layer">
+    <div class="layer-label">Layer 7 — Data Sources</div>
+    <div class="layer-content">
+
+      <div class="box data-box col-math" style="border-color:#86efac;">
+        <div class="box-title"><span class="icon">📄</span> NC Math PDFs</div>
+        <span class="chip">NC Math 1</span>
+        <span class="chip">NC Math 2</span>
+        <span class="chip">NC Math 3</span>
+        <div class="box-sub" style="margin-top:6px;">Official NC DPI curriculum standard PDFs. Stored in <code>data/</code>.</div>
+      </div>
+
+      <div class="box data-box col-admin" style="border-color:#fdba74;">
+        <div class="box-title"><span class="icon">🌐</span> District Websites &amp; Policy PDFs</div>
+        <span class="chip">WCPSS (wcpss.net)</span>
+        <span class="chip">Frisco ISD (friscoisd.org)</span>
+        <span class="chip">Plano ISD (pisd.edu)</span>
+        <div class="box-sub" style="margin-top:6px;">School calendars, board meetings, attendance policies, student handbooks. Local PDFs in <code>data/admin/&lt;district&gt;/</code>.</div>
+      </div>
+
+      <div class="box data-box col-guidance guidance-box" style="opacity:0.8;">
+        <div class="box-title"><span class="icon">🏫</span> University &amp; CCP Sources<span class="phase2-badge">Phase 2</span></div>
+        <span class="chip">UNC Chapel Hill</span>
+        <span class="chip">NC State</span>
+        <span class="chip">UC Berkeley</span>
+        <span class="chip">UC San Diego</span>
+        <span class="chip">Wake Tech CCP</span>
+        <div class="box-sub" style="margin-top:6px;">Admissions requirements, A-G policies, NC DPI Future-Ready Core, CAA articulation, NCDPI Dual Credit Chart.</div>
+      </div>
+
+      <div class="box oos-box col-oos" style="display:flex; align-items:center; justify-content:center; text-align:center;">
+        <div>
+          <div class="box-title" style="justify-content:center;">—</div>
+          <div class="box-sub" style="font-size:0.72rem;">No external data source for out-of-scope responses.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PHASE 2 EXTRA — Guidance-only components               -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="connector" style="opacity:0.5;"><div class="connector-arrow"></div></div>
+
+  <div class="layer">
+    <div class="layer-label">Phase 2 Only — Guidance Domain Components</div>
+    <div class="layer-content" style="gap:10px;">
+
+      <div class="box guidance-box" style="flex:1.2;">
+        <div class="box-title"><span class="icon">👤</span> Student Profile (SQLite)<span class="phase2-badge">Phase 2</span></div>
+        <div class="box-sub">Persistent longitudinal profile per session. Loaded at start, updated after each guidance interaction.</div>
+        <div class="detail-row">
+          <code>grade_level</code> · <code>current_courses[]</code> · <code>completed_courses[]</code> · <code>weighted_gpa</code> · <code>target_universities[]</code>
+        </div>
+      </div>
+
+      <div class="box guidance-box" style="flex:1.2;">
+        <div class="box-title"><span class="icon">🔄</span> Articulation Engine<span class="phase2-badge">Phase 2</span></div>
+        <div class="box-sub"><code>src/articulation_engine.py</code> — rules-based, runs <em>before</em> the LLM call to pre-compute cross-state equivalencies and prevent hallucination.</div>
+        <div class="detail-row">
+          NC Math 1+2+3 → UC A-G "c" · NC Math 3 → UNC MCR "beyond Algebra II" · AP Calc AB/BC → UC advanced math unit
+        </div>
+      </div>
+
+      <div class="box guidance-box" style="flex:1.2;">
+        <div class="box-title"><span class="icon">🌳</span> Prerequisite Graph<span class="phase2-badge">Phase 2</span></div>
+        <div class="box-sub"><code>config/course_prerequisites.yaml</code> + <code>src/prerequisite_graph.py</code>. Enforces prerequisite ordering before any course recommendation is generated.</div>
+        <div class="detail-row">
+          Math 1 → Math 2 → Math 3 → Precalc → AP Calc AB → AP Calc BC<br/>
+          AP Chem → Biology Honors + Math 3 · AP Physics C → AP Calc AB
+        </div>
+      </div>
+
+      <div class="box guidance-box" style="flex:1.2;">
+        <div class="box-title"><span class="icon">📊</span> Grade-by-Grade Planner<span class="phase2-badge">Phase 2</span></div>
+        <div class="box-sub">Generates a 9th–12th multi-domain progression table: Math, Science, ELA, Social Studies, World Language, Electives. Flags UC/UNC requirement gaps proactively.</div>
+        <div class="detail-row">
+          Gap analysis alerts · Dual enrollment callouts · Course sequence ladder widget
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /diagram -->
+
+<div class="footer">
+  Ed-Copilot Architecture · Wake County NC / Frisco ISD TX / Plano ISD TX · Phase 2 components shown with dashed borders are planned but not yet implemented.
+  <br/>Created for learning purposes. Please refer to your county's official website for authoritative information.
+</div>
+
+</body>
+</html>
