@@ -26,7 +26,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run app.py"
+args = "bash scripts/replit_setup.sh"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
@@ -38,7 +38,7 @@ externalPort = 80
 
 [deployment]
 deploymentTarget = "vm"
-run = ["streamlit", "run", "app.py"]
+run = ["bash", "scripts/replit_setup.sh"]
 
 [postMerge]
 path = "scripts/post-merge.sh"

@@ -36,7 +36,7 @@ from src.orchestrator import build_graph, EdCopilotState
 from src.district_registry import DistrictRegistry
 
 
-DATASET_NAME = "Ed-Copilot Gold Standard Q&A"
+DATASET_NAME = "Ed-Copilot Multi-District Gold Standard"
 
 GOLD_STANDARD_QUESTIONS = [
     {
@@ -159,6 +159,80 @@ GOLD_STANDARD_QUESTIONS = [
         "district": "wake_county_nc",
         "persona": "teacher",
     },
+    # --- Frisco ISD (course catalog) ---
+    {
+        "id": 16,
+        "course_id": "course_catalog",
+        "standard_id": "",
+        "expected": "AP Calculus AB",
+        "question": "What are the prerequisites for AP Calculus AB at Frisco ISD?",
+        "district": "frisco_isd_tx",
+        "persona": "parent",
+    },
+    {
+        "id": 17,
+        "course_id": "course_catalog",
+        "standard_id": "",
+        "expected": "AP Statistics",
+        "question": "Does Frisco ISD offer AP Statistics, and what are its prerequisites?",
+        "district": "frisco_isd_tx",
+        "persona": "student",
+    },
+    {
+        "id": 18,
+        "course_id": "course_catalog",
+        "standard_id": "",
+        "expected": "Precalculus",
+        "question": "What math course should my child take after Algebra II at Frisco ISD?",
+        "district": "frisco_isd_tx",
+        "persona": "parent",
+    },
+    {
+        "id": 19,
+        "course_id": "course_catalog",
+        "standard_id": "",
+        "expected": "AP Calculus BC",
+        "question": "What is the most advanced calculus course Frisco ISD offers?",
+        "district": "frisco_isd_tx",
+        "persona": "teacher",
+    },
+    # --- Plano ISD (course catalog) ---
+    {
+        "id": 20,
+        "course_id": "course_catalog",
+        "standard_id": "",
+        "expected": "Geometry",
+        "question": "What grade levels typically take Geometry at Plano ISD, and what is the prerequisite?",
+        "district": "plano_isd_tx",
+        "persona": "parent",
+    },
+    {
+        "id": 21,
+        "course_id": "course_catalog",
+        "standard_id": "",
+        "expected": "AP Calculus AB",
+        "question": "What are the prerequisites for AP Calculus AB at Plano ISD?",
+        "district": "plano_isd_tx",
+        "persona": "student",
+    },
+    {
+        "id": 22,
+        "course_id": "course_catalog",
+        "standard_id": "",
+        "expected": "Precalculus",
+        "question": "What is Plano ISD's math course sequence from Algebra I to Calculus?",
+        "district": "plano_isd_tx",
+        "persona": "parent",
+    },
+    {
+        "id": 23,
+        "course_id": "course_catalog",
+        "standard_id": "",
+        "expected": "Algebra II",
+        "question": "What are the prerequisites and credit hours for Algebra II at Plano ISD?",
+        "district": "plano_isd_tx",
+        "persona": "teacher",
+    },
 ]
 
 
@@ -177,21 +251,25 @@ def get_or_create_dataset(client: Client) -> str:
             "Used for LLM-as-judge evaluation of Ed-Copilot's math specialist."
         ),
     )
+    def _reference(q: dict) -> str:
+        if q.get("standard_id"):
+            return (f"A correct, curriculum-grounded answer about {q['standard_id']} "
+                    f"from NC Math {q['course_id']}.")
+        return (f"A correct, catalog-grounded answer about {q.get('expected', 'the course')} "
+                f"in the {q['district']} course catalog.")
+
     examples = [
         {
             "inputs": {
                 "question": q["question"],
                 "district": q["district"],
                 "persona": q["persona"],
-                "standard_id": q["standard_id"],
-                "course_id": q["course_id"],
+                "standard_id": q.get("standard_id", ""),
+                "course_id": q.get("course_id", ""),
+                # Retrieval-hit target: NC standard id (Wake) or course name (Frisco/Plano).
+                "expected": q.get("expected") or q.get("standard_id", ""),
             },
-            "outputs": {
-                "reference": (
-                    f"A correct, curriculum-grounded answer about {q['standard_id']} "
-                    f"from NC Math {q['course_id']}."
-                )
-            },
+            "outputs": {"reference": _reference(q)},
         }
         for q in GOLD_STANDARD_QUESTIONS
     ]
@@ -218,7 +296,8 @@ def make_target(graph):
         }
         result = graph.invoke(state)
         context_snippets = [
-            f"[{doc.metadata.get('standard_id', 'N/A')}] {doc.page_content[:300]}"
+            f"[{doc.metadata.get('standard_id') or doc.metadata.get('course', 'N/A')}] "
+            f"{doc.page_content[:300]}"
             for doc in result.get("context_docs", [])
         ]
         return {
@@ -331,16 +410,20 @@ Return ONLY a valid JSON object with:
 
 def retrieval_hit_evaluator(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
     """
-    Checks whether the target standard ID was retrieved in the context docs.
+    Checks whether the expected item was retrieved in the context docs.
+    The target is the NC standard id for Wake County, or the course name for
+    the Frisco/Plano course-catalog questions. Case-insensitive.
     Returns 1.0 (hit) or 0.0 (miss).
     """
-    target_std = inputs.get("standard_id", "")
+    target = (inputs.get("expected") or inputs.get("standard_id", "")).strip()
     context = outputs.get("context", "")
-    hit = target_std in context
+    if not target:
+        return {"key": "retrieval_hit", "score": 0.0, "comment": "No expected target set."}
+    hit = target.lower() in context.lower()
     return {
         "key": "retrieval_hit",
         "score": 1.0 if hit else 0.0,
-        "comment": f"Target standard '{target_std}' {'found' if hit else 'NOT found'} in retrieved context.",
+        "comment": f"Expected '{target}' {'found' if hit else 'NOT found'} in retrieved context.",
     }
 
 
