@@ -94,6 +94,7 @@ with st.sidebar:
     st.divider()
     st.page_link("pages/architecture.py", label="🏗️ System Architecture", icon=None)
     st.page_link("pages/presentation.py", label="🎞️ Overview Deck", icon=None)
+    st.page_link("pages/presentation_warm.py", label="📖 Overview Deck (Warm)", icon=None)
 
     st.divider()
     if st.button("🗑️ Clear chat"):
