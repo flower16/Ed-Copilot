@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ed-Copilot — Overview Deck (Bold Editorial)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAFAF7;
+    --panel:#F0EFE9;
+    --border:#101010;
+    --text:#101010;
+    --text-dim:#3C3C3C;
+    --text-mute:#8A8A82;
+    --white:#101010;
+    --accent:#FF4E33;
+    --blue:#2D5BFF;
+    --yellow:#FFD23F;
+    --green:#1F9D55;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;background:var(--bg);}
+  body{
+    font-family:'Archivo',sans-serif;
+    color:var(--text);
+    overflow:hidden;
+  }
+  .mono{font-family:'Space Mono',monospace;}
+
+  .app{display:flex;height:100vh;width:100vw;}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:22vw;
+    min-width:230px;
+    height:100vh;
+    background:var(--text);
+    padding:4vh 2vw;
+    display:flex;
+    flex-direction:column;
+    overflow-y:auto;
+  }
+  .brand{display:flex;align-items:center;gap:0.8vw;margin-bottom:4vh;flex-shrink:0;}
+  .brand-mark{width:1.6vw;height:1.6vw;min-width:20px;min-height:20px;background:var(--accent);}
+  .brand-name{font-size:clamp(15px,1.3vw,19px);font-weight:900;color:#FAFAF7;text-transform:uppercase;letter-spacing:-0.01em;}
+
+  .nav-group{margin-bottom:3vh;}
+  .nav-group-label{
+    font-size:clamp(10px,0.75vw,12px);
+    font-weight:700;color:var(--yellow);
+    text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1.4vh;
+    font-family:'Space Mono',monospace;
+  }
+  .nav-item{
+    display:flex;align-items:center;gap:0.5vw;
+    font-size:clamp(11.5px,0.9vw,14.5px);
+    color:#FAFAF7;opacity:0.55;font-weight:700;
+    padding:0.7vh 0;cursor:pointer;
+    border-left:4px solid transparent;
+    padding-left:0.6vw;margin-left:-0.6vw;
+    transition:opacity .15s;
+  }
+  .nav-item:hover{opacity:0.85;}
+  .nav-item.current{
+    color:var(--accent);opacity:1;
+    border-left-color:var(--accent);
+  }
+  .sidebar-footer{margin-top:auto;font-size:clamp(9px,0.7vw,11px);color:#8A8A82;padding-top:2vh;flex-shrink:0;font-family:'Space Mono',monospace;}
+
+  /* ---------- Main stage ---------- */
+  .stage{flex:1;position:relative;height:100vh;overflow:hidden;}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:6vh 5vw;
+    overflow-y:auto;
+  }
+  .slide.active{display:flex;}
+
+  .eyebrow{
+    display:inline-block;
+    font-size:clamp(11px,0.9vw,14px);color:#FAFAF7;background:var(--accent);
+    text-transform:uppercase;letter-spacing:0.05em;font-weight:800;margin-bottom:2.2vh;
+    padding:0.6vh 1vw;width:fit-content;
+  }
+  h1.title{
+    font-size:clamp(34px,5vw,74px);font-weight:900;color:var(--white);
+    letter-spacing:-0.03em;margin-bottom:2.4vh;line-height:0.98;text-transform:uppercase;
+  }
+  p.lead{
+    font-size:clamp(15px,1.35vw,21px);color:var(--text-dim);
+    line-height:1.5;max-width:46vw;margin-bottom:3vh;font-weight:500;
+  }
+  .content{flex:1;display:flex;flex-direction:column;justify-content:center;gap:2vh;}
+
+  .footer-row{
+    margin-top:auto;padding-top:2vh;display:flex;justify-content:space-between;
+    align-items:center;font-size:clamp(10px,0.8vw,13px);color:var(--text);flex-shrink:0;
+    font-family:'Space Mono',monospace;font-weight:700;text-transform:uppercase;
+  }
+
+  /* ---------- Reusable components ---------- */
+  .code-box{
+    background:var(--text);color:#FAFAF7;border:3px solid var(--text);
+    padding:2.2vh 1.6vw;font-family:'Space Mono',monospace;font-size:clamp(11px,0.95vw,15px);
+    line-height:1.7;
+  }
+  .endpoint-box{
+    display:flex;align-items:center;gap:1.2vw;padding:1.6vh 1.6vw;
+    background:var(--blue);border:3px solid var(--text);
+    width:fit-content;
+  }
+  .endpoint-method{color:#FAFAF7;font-weight:800;font-family:'Space Mono',monospace;font-size:clamp(12px,1.05vw,16px);}
+  .endpoint-path{color:#FAFAF7;font-family:'Space Mono',monospace;font-size:clamp(12px,1.1vw,17px);}
+
+  .card-grid{display:grid;gap:1vw;}
+  .card-grid.cols-2{grid-template-columns:repeat(2,1fr);}
+  .card-grid.cols-3{grid-template-columns:repeat(3,1fr);}
+  .card-grid.cols-4{grid-template-columns:repeat(4,1fr);}
+  .card{
+    background:var(--panel);border:3px solid var(--text);
+    padding:2.2vh 1.5vw;
+  }
+  .card h3{font-size:clamp(14px,1.2vw,19px);color:var(--white);font-weight:800;margin-bottom:1vh;text-transform:uppercase;}
+  .card p{font-size:clamp(11px,0.92vw,14px);color:var(--text-dim);line-height:1.55;font-weight:500;}
+  .card .tag{
+    display:inline-block;font-size:clamp(10px,0.75vw,12px);color:#FAFAF7;background:var(--text);
+    font-family:'Space Mono',monospace;margin-bottom:1vh;padding:0.3vh 0.6vw;font-weight:700;
+  }
+
+  .stat-num{font-size:clamp(28px,3vw,46px);font-weight:900;color:var(--accent);font-family:'Archivo',sans-serif;}
+  .stat-label{font-size:clamp(11px,0.9vw,14px);color:var(--text-dim);margin-top:0.6vh;font-weight:700;text-transform:uppercase;}
+
+  .step-row{display:flex;align-items:flex-start;gap:1.4vw;}
+  .step-num{
+    width:2.8vw;height:2.8vw;min-width:36px;min-height:36px;border:3px solid var(--text);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-weight:900;font-size:clamp(14px,1.15vw,19px);background:var(--yellow);color:var(--text);
+  }
+  .step-title{font-size:clamp(15px,1.3vw,20px);color:var(--white);font-weight:800;margin-bottom:0.6vh;text-transform:uppercase;}
+  .step-body{font-size:clamp(11px,0.95vw,14px);color:var(--text-dim);line-height:1.55;font-weight:500;}
+
+  .pill{
+    display:inline-flex;align-items:center;gap:0.5vw;padding:0.9vh 1.2vw;
+    border:2px solid var(--text);background:#FAFAF7;
+    font-size:clamp(11px,0.92vw,14px);color:var(--text);font-weight:700;
+  }
+  .dot{width:0.7vw;height:0.7vw;min-width:9px;min-height:9px;border-radius:50%;}
+
+  .callout{
+    border:3px solid var(--text);background:var(--yellow);
+    padding:1.8vh 1.6vw;font-size:clamp(11px,0.95vw,14px);
+    color:var(--text);line-height:1.55;font-weight:600;
+  }
+  .callout.warn{background:var(--accent);color:#FAFAF7;}
+
+  .flow{display:flex;align-items:center;flex-wrap:wrap;gap:0.8vw;}
+  .flow-box{
+    background:#FAFAF7;border:3px solid var(--text);
+    padding:1.6vh 1.4vw;font-family:'Space Mono',monospace;font-size:clamp(11px,0.9vw,14px);color:var(--white);font-weight:700;
+  }
+  .flow-box.accent{background:var(--accent);color:#FAFAF7;}
+  .flow-box.muted{color:var(--text-mute);border-color:var(--text-mute);}
+  .flow-arrow{color:var(--text);font-size:clamp(16px,1.4vw,22px);font-weight:900;}
+
+  .bullets{list-style:none;display:flex;flex-direction:column;gap:1.2vh;}
+  .bullets li{
+    font-size:clamp(12px,1vw,16px);color:var(--text-dim);line-height:1.55;font-weight:600;
+    padding-left:1.6vw;position:relative;
+  }
+  .bullets li::before{
+    content:"";position:absolute;left:0;top:0.35em;width:0.8vw;height:0.8vw;min-width:10px;min-height:10px;
+    background:var(--accent);
+  }
+
+  /* ---------- Closing slide ---------- */
+  .closing-wrap{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  }
+  .closing-wrap h1{max-width:70vw;}
+  .closing-wrap p.lead{max-width:44vw;text-align:center;margin-left:auto;margin-right:auto;}
+
+  /* ---------- Controls ---------- */
+  .controls{
+    position:fixed;bottom:2.5vh;right:3vw;display:flex;align-items:center;gap:1vw;
+    background:var(--text);border:3px solid var(--text);
+    padding:1vh 1.2vw;z-index:50;
+  }
+  .controls button{
+    background:transparent;border:none;color:#FAFAF7;cursor:pointer;
+    font-size:18px;font-weight:900;padding:0.4vh 0.6vw;line-height:1;
+  }
+  .controls button:hover{color:var(--accent);}
+  .controls .count{font-family:'Space Mono',monospace;font-size:12px;color:#FAFAF7;font-weight:700;}
+
+  @media print{
+    body{overflow:visible;}
+    .controls,.sidebar{display:none !important;}
+    .stage{overflow:visible;height:auto;}
+    .slide{
+      display:flex !important;position:relative;inset:auto;
+      width:100vw;height:100vh;page-break-after:always;padding:6vh 6vw;
+    }
+    @page{size:landscape;margin:0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <nav class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">Ed-Copilot</div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Getting Started</div>
+      <div class="nav-item" data-slide="1">Overview</div>
+      <div class="nav-item" data-slide="2">The Problem</div>
+      <div class="nav-item" data-slide="3">What Is Ed-Copilot</div>
+      <div class="nav-item" data-slide="4">Personas</div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Architecture</div>
+      <div class="nav-item" data-slide="5">Multi-Tenant Design</div>
+      <div class="nav-item" data-slide="6">Districts</div>
+      <div class="nav-item" data-slide="7">LangGraph Orchestration</div>
+      <div class="nav-item" data-slide="8">Intent Classification</div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">RAG Pipeline</div>
+      <div class="nav-item" data-slide="9">Hybrid Retrieval</div>
+      <div class="nav-item" data-slide="10">Ingestion</div>
+      <div class="nav-item" data-slide="11">Freshness Tracking</div>
+      <div class="nav-item" data-slide="12">Citations</div>
+      <div class="nav-item" data-slide="13">Policy Agent</div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Platform</div>
+      <div class="nav-item" data-slide="14">Tech Stack</div>
+      <div class="nav-item" data-slide="15">Evaluation</div>
+      <div class="nav-item" data-slide="16">Safe Fallbacks</div>
+      <div class="nav-item" data-slide="17">Extensibility</div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Closing</div>
+      <div class="nav-item" data-slide="18">What's Next</div>
+    </div>
+
+    <div class="sidebar-footer">v1.0 · 2026</div>
+  </nav>
+
+  <main class="stage" id="stage">
+
+    <!-- Slide 1 — Title -->
+    <section class="slide" data-slide="1">
+      <div class="eyebrow">School Assistant Platform</div>
+      <h1 class="title">Ed-Copilot</h1>
+      <p class="lead">A multi-tenant AI school assistant for NC Math, district policy, and course planning.</p>
+      <div class="endpoint-box">
+        <div class="endpoint-method">POST</div>
+        <div class="endpoint-path">/copilot/ask</div>
+      </div>
+      <div class="content"></div>
+      <div class="footer-row"><span>01</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 2 — The Problem -->
+    <section class="slide" data-slide="2">
+      <div class="eyebrow">Why This Exists</div>
+      <h1 class="title">The Problem</h1>
+      <p class="lead">Students, parents, and teachers struggle to find trustworthy, up-to-date answers about curriculum standards and shifting district policies.</p>
+      <div class="content" style="max-width:52vw;">
+        <div class="callout warn">Curriculum standards and district policies are scattered across PDFs and websites — hard to search, easy to misquote.</div>
+        <div class="callout">Generic chatbots hallucinate or lack local context, giving confident but wrong answers about a specific district's rules.</div>
+      </div>
+      <div class="footer-row"><span>02</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 3 — What Is Ed-Copilot -->
+    <section class="slide" data-slide="3">
+      <div class="eyebrow">Overview</div>
+      <h1 class="title">What Is Ed-Copilot</h1>
+      <p class="lead">A Streamlit chat app that answers grounded questions using Retrieval-Augmented Generation (RAG) over each district's own curriculum and policy documents.</p>
+      <div class="content">
+        <div class="card-grid cols-3">
+          <div class="card"><span class="tag">GROUNDED</span><h3>RAG-Powered</h3><p>Answers are retrieved from real district documents, not model memory alone.</p></div>
+          <div class="card"><span class="tag">TAILORED</span><h3>Persona-Aware</h3><p>Same question, different depth depending on who's asking.</p></div>
+          <div class="card"><span class="tag">TRANSPARENT</span><h3>Cited Sources</h3><p>Every answer links back to the exact standard, course, or policy page used.</p></div>
+        </div>
+      </div>
+      <div class="footer-row"><span>03</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 4 — Personas -->
+    <section class="slide" data-slide="4">
+      <div class="eyebrow">Getting Started</div>
+      <h1 class="title">Three Personas</h1>
+      <p class="lead">Same question, tailored answer depth per audience.</p>
+      <div class="content">
+        <div class="card-grid cols-3">
+          <div class="card"><span class="tag">STUDENT</span><h3>Student</h3><p>Brief, direct answers. Kept simple and friendly.</p></div>
+          <div class="card"><span class="tag">PARENT</span><h3>Parent</h3><p>Summarized key points plus a list of action items for the family.</p></div>
+          <div class="card"><span class="tag">TEACHER</span><h3>Teacher</h3><p>Full policy text with the original source link included.</p></div>
+        </div>
+      </div>
+      <div class="footer-row"><span>04</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 5 — Multi-Tenant Design -->
+    <section class="slide" data-slide="5">
+      <div class="eyebrow">Architecture</div>
+      <h1 class="title">Multi-Tenant</h1>
+      <p class="lead">A plugin-based registry auto-discovers district agents — adding a district takes zero orchestrator changes.</p>
+      <div class="content" style="flex-direction:row;gap:1.6vw;align-items:center;">
+        <div class="code-box" style="flex:1;">
+<span style="color:var(--yellow)">district_id:</span> frisco_isd_tx<br>
+<span style="color:var(--yellow)">name:</span> Frisco ISD<br>
+<span style="color:var(--yellow)">agent_module:</span> src.agents.frisco_isd_tx_agent<br>
+<span style="color:var(--yellow)">intents:</span><br>
+&nbsp;&nbsp;- course_catalog<br>
+&nbsp;&nbsp;- admin_policy
+        </div>
+        <div style="flex:1;">
+          <div class="bullets">
+            <li>DistrictRegistry scans <span class="mono">config/tenants/*.yaml</span> on startup.</li>
+            <li>Each config points to an agent module implementing <span class="mono">DistrictAgent</span>.</li>
+            <li>The graph auto-registers one node per district — no core code edits.</li>
+          </div>
+        </div>
+      </div>
+      <div class="footer-row"><span>05</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 6 — Districts -->
+    <section class="slide" data-slide="6">
+      <div class="eyebrow">Architecture</div>
+      <h1 class="title">Districts Today</h1>
+      <p class="lead">Each district ships its own knowledge base, intents, and specialist agent.</p>
+      <div class="content">
+        <div class="card-grid cols-3">
+          <div class="card"><span class="tag">TX</span><h3>Frisco ISD</h3><p>Course catalog, admin policy, and college guidance for Frisco ISD students and families.</p></div>
+          <div class="card"><span class="tag">TX</span><h3>Plano ISD</h3><p>Course catalog, admin policy, and college guidance for Plano ISD students and families.</p></div>
+          <div class="card"><span class="tag">NC</span><h3>Wake County</h3><p>NC Math 1, 2, & 3 curriculum plus district admin policy for Wake County Public Schools.</p></div>
+        </div>
+      </div>
+      <div class="footer-row"><span>06</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 7 — LangGraph Orchestration -->
+    <section class="slide" data-slide="7">
+      <div class="eyebrow">Architecture</div>
+      <h1 class="title">Orchestration</h1>
+      <p class="lead">Each district agent auto-registers as a graph node — routing is fully data-driven.</p>
+      <div class="content">
+        <div class="flow">
+          <div class="flow-box accent">classify_intent</div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-box">route_to_district</div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-box">agent_&lt;district&gt;</div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-box muted">END</div>
+        </div>
+        <div class="flow" style="margin-top:1.2vh;">
+          <div class="flow-box muted" style="opacity:0.7;">(off-topic)</div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-box" style="background:var(--yellow);">out_of_scope_handler</div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-box muted">END</div>
+        </div>
+      </div>
+      <div class="footer-row"><span>07</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 8 — Intent Classification -->
+    <section class="slide" data-slide="8">
+      <div class="eyebrow">Architecture</div>
+      <h1 class="title">Intent Classification</h1>
+      <p class="lead">The LLM classifies each question into exactly one category before any retrieval happens.</p>
+      <div class="content" style="flex-direction:row;flex-wrap:wrap;gap:0.9vw;">
+        <div class="pill"><span class="dot" style="background:var(--accent);"></span>math_curriculum / course_catalog</div>
+        <div class="pill"><span class="dot" style="background:var(--green);"></span>admin_policy</div>
+        <div class="pill"><span class="dot" style="background:var(--blue);"></span>college_guidance</div>
+        <div class="pill"><span class="dot" style="background:var(--text-mute);"></span>out_of_scope</div>
+      </div>
+      <div class="footer-row"><span>08</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 9 — Hybrid Retrieval -->
+    <section class="slide" data-slide="9">
+      <div class="eyebrow">RAG Pipeline</div>
+      <h1 class="title">Hybrid Retrieval</h1>
+      <p class="lead">Dense and sparse search are fused, then reranked down to the highest-signal chunks.</p>
+      <div class="content" style="flex-direction:row;gap:1.2vw;">
+        <div class="code-box" style="flex:1;">
+          <div style="color:var(--yellow);font-weight:700;margin-bottom:1vh;">DENSE SEARCH</div>
+          ChromaDB<br>BAAI/bge-small-en-v1.5<br><span style="opacity:0.6">top 10 candidates</span>
+        </div>
+        <div class="flow-arrow" style="align-self:center;">&rarr;</div>
+        <div class="code-box" style="flex:1;">
+          <div style="color:var(--yellow);font-weight:700;margin-bottom:1vh;">SPARSE SEARCH</div>
+          BM25 keyword index<br><span style="opacity:0.6">top 10 candidates</span>
+        </div>
+        <div class="flow-arrow" style="align-self:center;">&rarr;</div>
+        <div class="code-box" style="flex:1;">
+          <div style="color:var(--yellow);font-weight:700;margin-bottom:1vh;">RRF + RERANK</div>
+          Reciprocal Rank Fusion<br>Cross-encoder (ms-marco-MiniLM-L-6-v2)<br><span style="opacity:0.6">top 4 chunks</span>
+        </div>
+      </div>
+      <div class="footer-row"><span>09</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 10 — Ingestion -->
+    <section class="slide" data-slide="10">
+      <div class="eyebrow">RAG Pipeline</div>
+      <h1 class="title">Ingestion</h1>
+      <p class="lead">Delta checks ensure already-indexed documents are never duplicated.</p>
+      <div class="content" style="gap:2.4vh;max-width:52vw;">
+        <div class="step-row">
+          <div class="step-num">1</div>
+          <div><div class="step-title">Parse & Chunk</div><div class="step-body">PyMuPDF extracts text; a regex chunker splits by standard ID (e.g. NC.M1.A-APR.1).</div></div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">2</div>
+          <div><div class="step-title">Embed</div><div class="step-body">Each chunk is embedded with BAAI/bge-small-en-v1.5.</div></div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">3</div>
+          <div><div class="step-title">Store & Dedupe</div><div class="step-body">New chunks are added to ChromaDB; already-indexed sources are skipped.</div></div>
+        </div>
+      </div>
+      <div class="footer-row"><span>10</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 11 — Freshness -->
+    <section class="slide" data-slide="11">
+      <div class="eyebrow">RAG Pipeline</div>
+      <h1 class="title">Freshness Tracking</h1>
+      <p class="lead">Users can always see exactly how current the knowledge base is.</p>
+      <div class="content">
+        <div class="card-grid cols-2">
+          <div class="card"><h3>Last Refreshed</h3><p>Displayed in the sidebar from the ingestion log — timestamp of the most recent run.</p></div>
+          <div class="card"><h3>Chunks Indexed</h3><p>Total chunks indexed in the last run, plus a per-district breakdown on demand.</p></div>
+        </div>
+      </div>
+      <div class="footer-row"><span>11</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 12 — Citations -->
+    <section class="slide" data-slide="12">
+      <div class="eyebrow">RAG Pipeline</div>
+      <h1 class="title">Citations</h1>
+      <p class="lead">Full transparency, no black box — every answer shows its work.</p>
+      <div class="content" style="flex-direction:row;gap:1.2vw;">
+        <div class="code-box" style="flex:1;">
+          <span style="color:var(--yellow)">standard_id</span>: NC.M1.A-APR.1<br>
+          <span style="color:var(--yellow)">course_id</span>: Math_1<br>
+          <span style="color:var(--yellow)">rerank_score</span>: 0.91
+        </div>
+        <div class="code-box" style="flex:1;">
+          <span style="color:var(--yellow)">label</span>: Attendance Policy<br>
+          <span style="color:var(--yellow)">source_url</span>: district site<br>
+          <span style="color:var(--yellow)">fetched_date</span>: tracked
+        </div>
+      </div>
+      <div class="footer-row"><span>12</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 13 — Policy Agent -->
+    <section class="slide" data-slide="13">
+      <div class="eyebrow">RAG Pipeline</div>
+      <h1 class="title">Policy Agent</h1>
+      <p class="lead">A dedicated specialist retrieves scraped district website content, filtered by district.</p>
+      <div class="content" style="max-width:50vw;">
+        <div class="bullets">
+          <li>Answers using only the retrieved district context — never open-ended.</li>
+          <li>Falls back honestly when no matching content is found for that district.</li>
+        </div>
+        <div class="callout" style="margin-top:1vh;">"This information was scraped from public district websites. Verify at your district's official website." — appended to every policy answer.</div>
+      </div>
+      <div class="footer-row"><span>13</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 14 — Tech Stack -->
+    <section class="slide" data-slide="14">
+      <div class="eyebrow">Platform</div>
+      <h1 class="title">Tech Stack</h1>
+      <p class="lead">A focused, production-style stack behind a simple chat interface.</p>
+      <div class="content">
+        <div class="card-grid cols-3">
+          <div class="card"><h3>Llama-3.3-70B</h3><p>Served via the Nebius API for classification and generation.</p></div>
+          <div class="card"><h3>LangChain + LangGraph</h3><p>Prompting, chains, and the orchestration graph.</p></div>
+          <div class="card"><h3>ChromaDB</h3><p>Vector storage for curriculum and policy documents.</p></div>
+          <div class="card"><h3>HuggingFace Embeddings</h3><p>Local BAAI/bge-small-en-v1.5 embedding model.</p></div>
+          <div class="card"><h3>Streamlit</h3><p>The chat UI, sidebar settings, and architecture pages.</p></div>
+          <div class="card"><h3>LangSmith</h3><p>Tracing for observability across the orchestration graph.</p></div>
+        </div>
+      </div>
+      <div class="footer-row"><span>14</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 15 — Evaluation -->
+    <section class="slide" data-slide="15">
+      <div class="eyebrow">Platform</div>
+      <h1 class="title">Evaluation</h1>
+      <p class="lead">A concurrent evaluation suite scores every answer for faithfulness and relevance.</p>
+      <div class="content">
+        <div class="card-grid cols-4">
+          <div class="card"><div class="stat-num">4.73/5</div><div class="stat-label">Faithfulness</div></div>
+          <div class="card"><div class="stat-num">&lt;0.60s</div><div class="stat-label">Retrieval Latency</div></div>
+          <div class="card"><div class="stat-num">15</div><div class="stat-label">Gold Questions</div></div>
+          <div class="card"><div class="stat-num">LLM</div><div class="stat-label">Llama-3.3-70B Judge</div></div>
+        </div>
+      </div>
+      <div class="footer-row"><span>15</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 16 — Safe Fallbacks -->
+    <section class="slide" data-slide="16">
+      <div class="eyebrow">Platform</div>
+      <h1 class="title">Safe Fallbacks</h1>
+      <p class="lead">Honest uncertainty beats a confident, wrong answer.</p>
+      <div class="content">
+        <div class="flow">
+          <div class="flow-box">Question</div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-box accent">classify_intent</div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-box">vectorstore filter</div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-box" style="background:var(--yellow);">"I don't have that information."</div>
+        </div>
+      </div>
+      <div class="footer-row"><span>16</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 17 — Extensibility -->
+    <section class="slide" data-slide="17">
+      <div class="eyebrow">Platform</div>
+      <h1 class="title">Built To Extend</h1>
+      <p class="lead">Onboarding a new district doesn't touch the core application.</p>
+      <div class="content" style="gap:2.4vh;max-width:54vw;">
+        <div class="step-row">
+          <div class="step-num">1</div>
+          <div><div class="step-title">Drop a tenant config</div><div class="step-body"><span class="mono">config/tenants/&lt;district&gt;.yaml</span></div></div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">2</div>
+          <div><div class="step-title">Drop an agent module</div><div class="step-body"><span class="mono">src/agents/&lt;district&gt;_agent.py</span> implementing DistrictAgent</div></div>
+        </div>
+        <div class="callout">The registry and graph pick it up automatically — no core code changes.</div>
+      </div>
+      <div class="footer-row"><span>17</span><span>Ed-Copilot</span></div>
+    </section>
+
+    <!-- Slide 18 — Closing -->
+    <section class="slide" data-slide="18">
+      <div class="closing-wrap">
+        <div class="brand-mark" style="width:4vw;height:4vw;margin-bottom:4vh;"></div>
+        <h1 class="title">What's Next</h1>
+        <p class="lead">A grounded, persona-aware, multi-district AI assistant built on a hybrid RAG + LangGraph foundation.</p>
+        <div class="flow" style="justify-content:center;margin-top:2vh;">
+          <div class="pill"><span class="dot" style="background:var(--accent);"></span>More districts</div>
+          <div class="pill"><span class="dot" style="background:var(--green);"></span>Richer policy scraping cadence</div>
+          <div class="pill"><span class="dot" style="background:var(--blue);"></span>Voice input</div>
+          <div class="pill"><span class="dot" style="background:var(--text-mute);"></span>Admin analytics dashboard</div>
+        </div>
+      </div>
+      <div class="footer-row"><span>18</span><span>Ed-Copilot</span></div>
+    </section>
+
+  </main>
+</div>
+
+<div class="controls">
+  <button id="prevBtn" aria-label="Previous slide">&larr;</button>
+  <span class="count"><span id="curNum">1</span> / <span id="totalNum">18</span></span>
+  <button id="nextBtn" aria-label="Next slide">&rarr;</button>
+</div>
+
+<script>
+  var TOTAL = 18;
+  var current = 1;
+  var slides = document.querySelectorAll('.slide');
+  var navItems = document.querySelectorAll('.nav-item');
+
+  document.getElementById('totalNum').textContent = TOTAL;
+
+  function show(n){
+    if(n < 1) n = 1;
+    if(n > TOTAL) n = TOTAL;
+    current = n;
+    slides.forEach(function(s){
+      s.classList.toggle('active', parseInt(s.getAttribute('data-slide'),10) === current);
+    });
+    navItems.forEach(function(item){
+      var match = parseInt(item.getAttribute('data-slide'),10) === current;
+      item.classList.toggle('current', match);
+      if(match){ item.scrollIntoView({block:'nearest'}); }
+    });
+    document.getElementById('curNum').textContent = current;
+  }
+
+  navItems.forEach(function(item){
+    item.addEventListener('click', function(){
+      show(parseInt(item.getAttribute('data-slide'),10));
+    });
+  });
+
+  document.getElementById('prevBtn').addEventListener('click', function(){ show(current - 1); });
+  document.getElementById('nextBtn').addEventListener('click', function(){ show(current + 1); });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.key === 'PageDown'){ show(current + 1); }
+    if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ show(current - 1); }
+  });
+
+  show(1);
+</script>
+
+</body>
+</html>
