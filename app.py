@@ -1,8 +1,8 @@
 import streamlit as st
-from src.orchestrator import build_graph, EdCopilotState
-from src.district_registry import DistrictRegistry
 import os
 import json
+import glob
+import yaml
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 
@@ -23,22 +23,32 @@ st.warning(
     icon="📋",
 )
 
-@st.cache_resource(show_spinner="Loading district agents...")
-def init_registry():
-    return DistrictRegistry()
+@st.cache_data
+def load_district_names():
+    """District display names straight from tenant configs — no heavy imports."""
+    names = {}
+    pattern = os.path.join(os.path.dirname(__file__), "config", "tenants", "*.yaml")
+    for path in sorted(glob.glob(pattern)):
+        try:
+            with open(path, "r") as f:
+                cfg = yaml.safe_load(f) or {}
+            if cfg.get("district_id"):
+                names[cfg["district_id"]] = cfg.get("name", cfg["district_id"])
+        except Exception:
+            continue
+    return names
 
 
-@st.cache_resource(show_spinner="Initializing Ed-Copilot...")
-def init_graph(_registry):
+@st.cache_resource(show_spinner="Loading the AI engine (only needed for your first question)...")
+def get_graph():
+    """Lazy-load the heavy AI stack only when the first question is asked."""
     api_key = os.environ.get("NEBIUS_API_KEY", "")
     if not api_key or api_key == "your-key-here":
         st.error("Please add your NEBIUS_API_KEY to the .env file.")
         st.stop()
-    return build_graph(_registry)
-
-
-registry = init_registry()
-graph = init_graph(registry)
+    from src.district_registry import DistrictRegistry
+    from src.orchestrator import build_graph
+    return build_graph(DistrictRegistry())
 
 FEEDBACK_LOG_PATH = os.path.join(os.path.dirname(__file__), "data", "feedback_log.json")
 
@@ -67,7 +77,7 @@ def save_feedback(question, response_text, persona, district, rating, districts=
         st.toast(f"Could not save feedback: {_e}", icon="⚠️")
 
 
-DISTRICT_NAMES = registry.display_names()
+DISTRICT_NAMES = load_district_names()
 
 # Curated aliases only — avoid broad single-word matches (e.g. "wake") that
 # could hijack routing on ordinary sentences.
@@ -148,7 +158,7 @@ with st.sidebar:
         key="persona",
     )
 
-    _district_names = registry.display_names()
+    _district_names = DISTRICT_NAMES
     district = st.selectbox(
         "District",
         options=list(_district_names.keys()),
@@ -228,6 +238,9 @@ if prompt := st.chat_input("Ask about NC Math, school policy, or course planning
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             try:
+                graph = get_graph()
+                from src.orchestrator import EdCopilotState
+
                 mentioned = detect_mentioned_districts(prompt)
                 targets = mentioned if mentioned else [st.session_state.get("district", "wake_county_nc")]
 
