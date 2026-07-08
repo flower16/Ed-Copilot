@@ -3,16 +3,15 @@
 #   python -m venv .venv
 #   .venv\Scripts\python -m pip install -r requirements.txt --only-binary=chromadb
 # chromadb 1.x ships a prebuilt wheel (Rust core, no C++ build tools needed).
---extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.11.0
 streamlit==1.40.2
-chromadb==1.5.9
+chromadb==0.5.23
 langchain==0.3.27
 langchain-community==0.3.27
 langchain-core==0.3.86
 langchain-openai==0.2.14
 langchain-huggingface==0.1.2
-langchain-chroma==0.2.6
+langchain-chroma==0.1.4
 langgraph==0.2.60
 tokenizers==0.20.3
 transformers==4.46.3
@@ -28,3 +27,26 @@ fastapi==0.139.0
 uvicorn==0.50.2
 # Optional — only needed for live Frisco crawl (--crawl); seed ingestion works without it:
 # playwright==1.48.0
+httpx
+langchain-chroma==0.1.4
+beautifulsoup4==4.12.3
+fastapi==0.139.0
+httpx
+langchain==0.3.27
+langchain-chroma==0.1.4
+langchain-community==0.3.27
+langchain-core==0.3.86
+langchain-huggingface==0.1.2
+langchain-openai==0.2.14
+langgraph==0.2.60
+openai>=1.58.1,<2.0.0
+pymupdf==1.24.14
+python-dotenv==1.0.1
+rank-bm25==0.2.2
+sentence-transformers==3.3.1
+streamlit==1.40.2
+tokenizers==0.20.3
+torch==2.11.0
+transformers==4.46.3
+uvicorn==0.50.2
+torch==2.11.0
