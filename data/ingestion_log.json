@@ -12,5 +12,23 @@
         "chunks_indexed": 1158
       }
     }
+  },
+  {
+    "run_at": "2026-07-08T14:59:59.363497+00:00",
+    "total_chunks_indexed": 1170,
+    "districts": {
+      "frisco_isd_tx": {
+        "name": "Frisco ISD",
+        "chunks_indexed": 7
+      },
+      "plano_isd_tx": {
+        "name": "Plano ISD",
+        "chunks_indexed": 5
+      },
+      "wake_county_nc": {
+        "name": "Wake County NC (WCPSS)",
+        "chunks_indexed": 1158
+      }
+    }
   }
 ]
