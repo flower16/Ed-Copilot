@@ -233,8 +233,17 @@ if prompt := st.chat_input("Ask about NC Math, school policy, or course planning
 
                 results = []
                 for _did in targets:
+                    _messages = st.session_state.messages
+                    if len(targets) > 1:
+                        _focused = (
+                            f"{prompt}\n\n"
+                            f"(Answer only for {DISTRICT_NAMES.get(_did, _did)}. "
+                            f"Do not mention lacking information about other districts — "
+                            f"they are being answered separately.)"
+                        )
+                        _messages = st.session_state.messages[:-1] + [{"role": "user", "content": _focused}]
                     state = EdCopilotState(
-                        messages=st.session_state.messages,
+                        messages=_messages,
                         persona=st.session_state.get("persona", "student"),
                         district=_did,
                         intent="",
