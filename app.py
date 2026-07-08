@@ -40,6 +40,46 @@ def init_graph(_registry):
 registry = init_registry()
 graph = init_graph(registry)
 
+FEEDBACK_LOG_PATH = os.path.join(os.path.dirname(__file__), "data", "feedback_log.json")
+
+
+def save_feedback(question, response_text, persona, district, rating):
+    record = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "persona": persona,
+        "district": district,
+        "question": question,
+        "response": response_text,
+        "rating": "up" if rating == 1 else "down",
+    }
+    try:
+        os.makedirs(os.path.dirname(FEEDBACK_LOG_PATH), exist_ok=True)
+        if os.path.exists(FEEDBACK_LOG_PATH):
+            with open(FEEDBACK_LOG_PATH, "r") as _f:
+                _existing = json.load(_f)
+        else:
+            _existing = []
+        _existing.append(record)
+        with open(FEEDBACK_LOG_PATH, "w") as _f:
+            json.dump(_existing, _f, indent=2)
+    except Exception as _e:
+        st.toast(f"Could not save feedback: {_e}", icon="⚠️")
+
+
+def render_feedback_widget(idx, question, response_text):
+    saved_key = f"feedback_saved_{idx}"
+    rating = st.feedback("thumbs", key=f"feedback_{idx}")
+    if rating is not None and st.session_state.get(saved_key) != rating:
+        save_feedback(
+            question,
+            response_text,
+            st.session_state.get("persona", "student"),
+            st.session_state.get("district", "wake_county_nc"),
+            rating,
+        )
+        st.session_state[saved_key] = rating
+        st.toast("Thanks for the feedback!", icon="🙏")
+
 with st.sidebar:
     st.header("⚙️ Settings")
 
@@ -107,7 +147,7 @@ with st.sidebar:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-for message in st.session_state.messages:
+for idx, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         if message["role"] == "assistant" and message.get("badge"):
             st.caption(message["badge"])
@@ -122,6 +162,9 @@ for message in st.session_state.messages:
                     else:
                         st.write(f"**{src['standard_id']}** (Course: {src['course_id']}) — Rerank Score: {src['rerank_score']:.2f}")
                         st.caption(src["snippet"])
+        if message["role"] == "assistant":
+            _prev_question = st.session_state.messages[idx - 1]["content"] if idx > 0 else ""
+            render_feedback_widget(idx, _prev_question, message["content"])
 
 if prompt := st.chat_input("Ask about NC Math, school policy, or course planning..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -188,6 +231,8 @@ if prompt := st.chat_input("Ask about NC Math, school policy, or course planning
                     "badge": badge,
                     "sources": sources,
                 })
+
+                render_feedback_widget(len(st.session_state.messages) - 1, prompt, response)
 
             except Exception as e:
                 st.error(f"Error: {str(e)}")
