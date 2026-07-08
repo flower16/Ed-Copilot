@@ -3,8 +3,17 @@
 # Referenced by .replit ("Start application" workflow + deployment run).
 # NOTE: no `set -e` around ingestion — a data hiccup must never stop the UI serving.
 
-echo "[replit] installing python dependencies..."
-pip install -q -r requirements.txt
+REQS_HASH_FILE=".pythonlibs/.requirements.sha256"
+CURRENT_HASH="$(sha256sum requirements.txt | awk '{print $1}')"
+
+if [ -f "$REQS_HASH_FILE" ] && [ "$(cat "$REQS_HASH_FILE")" = "$CURRENT_HASH" ]; then
+  echo "[replit] python dependencies unchanged — skipping pip install."
+else
+  echo "[replit] installing python dependencies..."
+  pip install -q -r requirements.txt
+  mkdir -p .pythonlibs
+  echo "$CURRENT_HASH" > "$REQS_HASH_FILE"
+fi
 
 # chroma_db/ is gitignored (regenerable + large), so it won't exist on a fresh
 # Replit import. Build all three district collections once, on first boot.
