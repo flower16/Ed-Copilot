@@ -22,6 +22,10 @@ if [ ! -d "chroma_db" ]; then
   python src/ingestion.py                  || echo "[replit] NC Math ingest failed; continuing"
   python src/ingestion/frisco_ingestion.py || echo "[replit] Frisco ingest failed; continuing"
   python src/ingestion/plano_ingestion.py  || echo "[replit] Plano ingest failed; continuing"
+  python src/admin_ingestion.py --log-only || echo "[replit] ingestion log write failed; continuing"
+elif [ ! -f "data/ingestion_log.json" ]; then
+  echo "[replit] chroma_db/ present but no ingestion log — backfilling log entry..."
+  python src/admin_ingestion.py --log-only || echo "[replit] ingestion log write failed; continuing"
 else
   echo "[replit] chroma_db/ already present — skipping ingestion."
 fi
