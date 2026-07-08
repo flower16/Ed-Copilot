@@ -1,0 +1,2 @@
+- [Ed-Copilot cold-start cost](ed-copilot-startup-cost.md) — ~20s boot delay is inherent (torch/transformers via local HF embeddings + cross-encoder); only paid once since deployment is a Reserved VM, not autoscale.
+- [Ed-Copilot presentation decks](ed-copilot-presentation-decks.md) — 5 visual-style decks (18 slides) + 1 requirements/workflow deck (14 slides), all as standalone HTML files wired into Streamlit pages.

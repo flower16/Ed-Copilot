@@ -138,6 +138,7 @@ with st.sidebar:
     st.page_link("pages/presentation_corporate.py", label="🗂️ Overview Deck (Corporate)", icon=None)
     st.page_link("pages/presentation_editorial.py", label="🟧 Overview Deck (Editorial)", icon=None)
     st.page_link("pages/presentation_dataforward.py", label="📊 Overview Deck (Data-Forward)", icon=None)
+    st.page_link("pages/presentation_requirements.py", label="📑 Executive Summary & Requirements", icon=None)
 
     st.divider()
     if st.button("🗑️ Clear chat"):
