@@ -22,5 +22,9 @@ python-dotenv==1.0.1
 pymupdf==1.24.14
 rank-bm25==0.2.2
 beautifulsoup4==4.12.3
+# A2A server (src/a2a/server.py). Already pulled in transitively by chromadb,
+# pinned here so the agent-to-agent HTTP surface is explicit.
+fastapi==0.139.0
+uvicorn==0.50.2
 # Optional — only needed for live Frisco crawl (--crawl); seed ingestion works without it:
 # playwright==1.48.0
