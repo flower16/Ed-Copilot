@@ -43,11 +43,12 @@ graph = init_graph(registry)
 FEEDBACK_LOG_PATH = os.path.join(os.path.dirname(__file__), "data", "feedback_log.json")
 
 
-def save_feedback(question, response_text, persona, district, rating):
+def save_feedback(question, response_text, persona, district, rating, districts=None):
     record = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "persona": persona,
         "district": district,
+        "districts": districts if districts else [district],
         "question": question,
         "response": response_text,
         "rating": "up" if rating == 1 else "down",
@@ -66,7 +67,63 @@ def save_feedback(question, response_text, persona, district, rating):
         st.toast(f"Could not save feedback: {_e}", icon="⚠️")
 
 
-def render_feedback_widget(idx, question, response_text):
+DISTRICT_NAMES = registry.display_names()
+
+# Curated aliases only — avoid broad single-word matches (e.g. "wake") that
+# could hijack routing on ordinary sentences.
+DISTRICT_ALIASES = {
+    "frisco_isd_tx": ["frisco isd", "frisco"],
+    "plano_isd_tx": ["plano isd", "plano"],
+    "wake_county_nc": ["wake county", "wcpss"],
+}
+
+
+def detect_mentioned_districts(text):
+    """Return district ids explicitly mentioned in the question text."""
+    import re
+    t = text.lower()
+    found = []
+    for did, name in DISTRICT_NAMES.items():
+        aliases = set(DISTRICT_ALIASES.get(did, [])) | {name.lower()}
+        if any(re.search(rf"\b{re.escape(a)}\b", t) for a in aliases):
+            found.append(did)
+    return found
+
+
+def build_sources(intent, docs):
+    sources = []
+    if intent == "admin_policy":
+        for doc in docs:
+            sources.append({
+                "label": doc.metadata.get("label", "—"),
+                "source_url": doc.metadata.get("source_url", "—"),
+                "fetched_date": doc.metadata.get("fetched_date", "—"),
+                "snippet": doc.page_content[:300] + "...",
+            })
+    else:
+        for doc in docs:
+            sources.append({
+                "standard_id": doc.metadata.get("standard_id", "—"),
+                "course_id": doc.metadata.get("course_id", "—"),
+                "rerank_score": doc.metadata.get("rerank_score", 0.0),
+                "snippet": doc.page_content[:300] + "...",
+            })
+    return sources
+
+
+def render_source(src):
+    if src.get("district"):
+        st.caption(f"District: {src['district']}")
+    if "source_url" in src:
+        st.write(f"**{src['label']}** — [{src['source_url']}]({src['source_url']})")
+        st.caption(f"Fetched: {src.get('fetched_date', '—')}")
+        st.caption(src["snippet"])
+    else:
+        st.write(f"**{src['standard_id']}** (Course: {src['course_id']}) — Rerank Score: {src['rerank_score']:.2f}")
+        st.caption(src["snippet"])
+
+
+def render_feedback_widget(idx, question, response_text, districts=None):
     saved_key = f"feedback_saved_{idx}"
     rating = st.feedback("thumbs", key=f"feedback_{idx}")
     if rating is not None and st.session_state.get(saved_key) != rating:
@@ -76,6 +133,7 @@ def render_feedback_widget(idx, question, response_text):
             st.session_state.get("persona", "student"),
             st.session_state.get("district", "wake_county_nc"),
             rating,
+            districts=districts,
         )
         st.session_state[saved_key] = rating
         st.toast("Thanks for the feedback!", icon="🙏")
@@ -97,6 +155,7 @@ with st.sidebar:
         format_func=lambda x: _district_names.get(x, x),
         key="district",
     )
+    st.caption("Tip: mention districts by name in your question (e.g. \"Frisco and Plano\") to compare across districts.")
 
     st.divider()
 
@@ -156,16 +215,10 @@ for idx, message in enumerate(st.session_state.messages):
         if message.get("sources"):
             with st.expander("View Retrieved Sources"):
                 for src in message["sources"]:
-                    if "source_url" in src:
-                        st.write(f"**{src['label']}** — [{src['source_url']}]({src['source_url']})")
-                        st.caption(f"Fetched: {src.get('fetched_date', '—')}")
-                        st.caption(src["snippet"])
-                    else:
-                        st.write(f"**{src['standard_id']}** (Course: {src['course_id']}) — Rerank Score: {src['rerank_score']:.2f}")
-                        st.caption(src["snippet"])
+                    render_source(src)
         if message["role"] == "assistant":
             _prev_question = st.session_state.messages[idx - 1]["content"] if idx > 0 else ""
-            render_feedback_widget(idx, _prev_question, message["content"])
+            render_feedback_widget(idx, _prev_question, message["content"], districts=message.get("districts"))
 
 if prompt := st.chat_input("Ask about NC Math, school policy, or course planning..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -175,65 +228,58 @@ if prompt := st.chat_input("Ask about NC Math, school policy, or course planning
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             try:
-                state = EdCopilotState(
-                    messages=st.session_state.messages,
-                    persona=st.session_state.get("persona", "student"),
-                    district=st.session_state.get("district", "wake_county_nc"),
-                    intent="",
-                    context_docs=[],
-                    response="",
-                    intent_badge="",
-                )
-                result = graph.invoke(state)
-                response = result["response"]
-                badge = result["intent_badge"]
-                docs = result.get("context_docs", [])
+                mentioned = detect_mentioned_districts(prompt)
+                targets = mentioned if mentioned else [st.session_state.get("district", "wake_county_nc")]
+
+                results = []
+                for _did in targets:
+                    state = EdCopilotState(
+                        messages=st.session_state.messages,
+                        persona=st.session_state.get("persona", "student"),
+                        district=_did,
+                        intent="",
+                        context_docs=[],
+                        response="",
+                        intent_badge="",
+                    )
+                    results.append((_did, graph.invoke(state)))
+
+                if len(results) == 1:
+                    _did, _res = results[0]
+                    response = _res["response"]
+                    badge = _res["intent_badge"]
+                else:
+                    response = "\n\n---\n\n".join(
+                        f"### {DISTRICT_NAMES.get(d, d)}\n\n{r['response']}" for d, r in results
+                    )
+                    badge = " | ".join(
+                        f"{DISTRICT_NAMES.get(d, d)}: {r['intent_badge']}" for d, r in results
+                    )
+
+                sources = []
+                for _d, _r in results:
+                    for _src in build_sources(_r.get("intent", ""), _r.get("context_docs", [])):
+                        if len(results) > 1:
+                            _src["district"] = DISTRICT_NAMES.get(_d, _d)
+                        sources.append(_src)
 
                 st.caption(badge)
                 st.markdown(response)
 
-                sources = []
-                intent = result.get("intent", "")
-                if docs:
+                if sources:
                     with st.expander("View Retrieved Sources"):
-                        if intent == "admin_policy":
-                            for doc in docs:
-                                label = doc.metadata.get("label", "—")
-                                source_url = doc.metadata.get("source_url", "—")
-                                fetched = doc.metadata.get("fetched_date", "—")
-                                snippet = doc.page_content[:300] + "..."
-                                st.write(f"**{label}** — [{source_url}]({source_url})")
-                                st.caption(f"Fetched: {fetched}")
-                                st.caption(snippet)
-                                sources.append({
-                                    "label": label,
-                                    "source_url": source_url,
-                                    "fetched_date": fetched,
-                                    "snippet": snippet,
-                                })
-                        else:
-                            for doc in docs:
-                                sid = doc.metadata.get("standard_id", "—")
-                                cid = doc.metadata.get("course_id", "—")
-                                score = doc.metadata.get("rerank_score", 0.0)
-                                snippet = doc.page_content[:300] + "..."
-                                st.write(f"**{sid}** (Course: {cid}) — Rerank Score: {score:.2f}")
-                                st.caption(snippet)
-                                sources.append({
-                                    "standard_id": sid,
-                                    "course_id": cid,
-                                    "rerank_score": score,
-                                    "snippet": snippet,
-                                })
+                        for _src in sources:
+                            render_source(_src)
 
                 st.session_state.messages.append({
                     "role": "assistant",
                     "content": response,
                     "badge": badge,
                     "sources": sources,
+                    "districts": targets,
                 })
 
-                render_feedback_widget(len(st.session_state.messages) - 1, prompt, response)
+                render_feedback_widget(len(st.session_state.messages) - 1, prompt, response, districts=targets)
 
             except Exception as e:
                 st.error(f"Error: {str(e)}")
