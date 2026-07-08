@@ -140,3 +140,78 @@ graph TD
    uv run streamlit run Wake-County-RAG/app.py
    ```
 3. Open your browser and navigate to the local URL (usually `http://localhost:8501`) to start chatting with your Patient Math Tutor!
+
+---
+
+## 🤝 Agent-to-Agent (A2A) Integration
+
+Ed-Copilot exposes its district agents over the **Agent-to-Agent (A2A) protocol** so other
+systems (e.g. `flower16/copilot-for-families`) can delegate district / curriculum questions
+to it over HTTP — **without importing any Ed-Copilot code**. The two apps share only an HTTP +
+JSON contract, so each stays independently deployable. See
+[MULTI_DISTRICT_PLAN.md §4.3](MULTI_DISTRICT_PLAN.md).
+
+### Architecture
+
+```
+┌──────────────────────────────┐      HTTP / JSON       ┌──────────────────────────────┐
+│  Consumer                    │  ───────────────────▶   │  Ed-Copilot A2A server        │
+│  copilot-for-families        │  GET /.well-known/       │  src/a2a/server.py            │
+│  backend/app/a2a/client.py   │      agent.json          │  src/a2a/agent_card.py        │
+│  EdCopilotA2AClient          │  ◀──── agent card ────    │                              │
+│                              │  POST /run {district,msg}│  → orchestrator → ChromaDB    │
+│  POST /a2a/ask (auth route)  │  ◀──── grounded answer ─  │  → Nebius LLM                 │
+└──────────────────────────────┘                         └──────────────────────────────┘
+```
+
+### Server side (this repo) — `src/a2a/`
+
+| File | Role |
+|---|---|
+| [`agent_card.py`](src/a2a/agent_card.py) | Builds the A2A **agent card** from the `DistrictRegistry` — one *skill* per district (id, name, intents, examples). Add a district → the card advertises it automatically. |
+| [`server.py`](src/a2a/server.py) | FastAPI app exposing the endpoints below. Drives the **existing orchestrator** unchanged; registry + graph are lazily cached. |
+
+**Endpoints**
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /.well-known/agent.json` | Serve the agent card (A2A discovery convention) |
+| `GET /health` | Liveness + registered district ids |
+| `POST /run` | Run one question: `{message, district, persona}` → `{response, intent, intent_badge, sources}` |
+
+**Run it**
+
+```bash
+# from the project root, using the project venv; needs NEBIUS_API_KEY in .env
+A2A_PORT=8100 python -m src.a2a.server
+# health check
+curl http://localhost:8100/health
+# ask a district agent
+curl -X POST http://localhost:8100/run -H "Content-Type: application/json" \
+  -d '{"district":"frisco_isd_tx","persona":"parent","message":"What math courses does Frisco ISD offer?"}'
+```
+
+Env: `A2A_PORT` (default `8100`), `A2A_PUBLIC_URL` (overrides the `url` in the agent card).
+
+### Consumer side (`flower16/copilot-for-families`) — `backend/app/a2a/`
+
+- `client.py` — `EdCopilotA2AClient` (httpx-only): `get_agent_card()`, `supported_districts()`,
+  `supports(district, intent)`, `run(district, message, persona)`.
+- `config.py` — `ED_COPILOT_A2A_URL` setting (empty disables the feature).
+- `main.py` — auth-protected `GET /a2a/districts` and `POST /a2a/ask` routes that map the
+  logged-in user's role → persona and delegate to this server.
+
+Point it at a running server via `ED_COPILOT_A2A_URL=http://localhost:8100` in that repo's `.env`.
+
+### Request flow
+
+```
+parent logs into copilot-for-families            → JWT
+POST /a2a/ask {district, message} (Bearer token)
+  → EdCopilotA2AClient.run()
+    → POST {A2A_URL}/run
+      → registry check → orchestrator.invoke()
+        → classify_intent → agent_<district> → retrieve() → synthesize() (Nebius)
+      ← {response, intent, intent_badge, sources}
+```
+
